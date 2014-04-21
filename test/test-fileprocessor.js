@@ -209,6 +209,7 @@ describe('FileProcessor', function() {
       'app/bar.css': 'bar.5678.css',
       'app/baz.css': '/baz.8910.css',
       'app/image.png': 'image.1234.png',
+      'app/video.webm': 'video.1234.webm',
       'tmp/bar.css': 'bar.1234.css',
       'app/foo.js': 'foo.1234.js',
       '/styles/main.css': '/styles/main.1234.css'
@@ -317,6 +318,24 @@ describe('FileProcessor', function() {
       var content = '<img src="image.png">';
       var replaced = fp.replaceWithRevved(content, ['app']);
       assert.equal(replaced, '<img src="' + filemapping['app/image.png'] + '">');
+    });
+
+    it('should replace video reference with revved version', function () {
+      var content = '<video src="video.webm">';
+      var replaced = fp.replaceWithRevved(content, ['app']);
+      assert.equal(replaced, '<video src="' + filemapping['app/video.webm'] + '">');
+    });
+
+    it('should replace source reference with revved version', function () {
+      var content = '<source src="video.webm">';
+      var replaced = fp.replaceWithRevved(content, ['app']);
+      assert.equal(replaced, '<source src="' + filemapping['app/video.webm'] + '">');
+    });
+
+    it('should replace videos\'s poster with revved version', function() {
+      var content = '<video poster="image.png">';
+      var replaced = fp.replaceWithRevved(content, ['app']);
+      assert.equal(replaced, '<video poster="'+ filemapping['app/image.png'] + '">');
     });
 
     it('should replace data reference with revved version', function () {
@@ -428,6 +447,32 @@ describe('FileProcessor', function() {
 
     describe('font path', function() {
       var content = '@font-face {\nfont-family:"icons";\nsrc:url("/styles/fonts/icons.eot");\nsrc:url("/styles/fonts/icons.eot?#iefix") format("embedded-opentype"),\nurl("/styles/fonts/icons.woff") format("woff"),\nurl("/styles/fonts/icons.ttf") format("truetype"),\nurl("/styles/fonts/icons.svg?#icons") format("svg");\nfont-weight:normal;\nfont-style:normal;\n}';
+      var filemapping = {
+        'build/styles/fonts/icons.eot': '/styles/fonts/icons.12345.eot',
+        'build/styles/fonts/icons.woff': '/styles/fonts/icons.12345.woff',
+        'build/styles/fonts/icons.ttf': '/styles/fonts/icons.12345.ttf',
+        'build/styles/fonts/icons.svg': '/styles/fonts/icons.12345.svg',
+      };
+
+      var revvedfinder = helpers.makeFinder(filemapping);
+
+      beforeEach(function() {
+        cp = new FileProcessor('css', revvedfinder);
+      });
+
+      it('should replace but ignore querystrings on revved files when found', function(){
+        var changed = cp.replaceWithRevved(content, ['build']);
+
+        assert.ok(changed.match(/\/styles\/fonts\/icons\.12345\.eot/));
+        assert.ok(changed.match(/\/styles\/fonts\/icons\.12345\.woff/));
+        assert.ok(changed.match(/\/styles\/fonts\/icons\.12345\.ttf/));
+        assert.ok(changed.match(/\/styles\/fonts\/icons\.12345\.svg/));
+      });
+
+    });
+
+    describe('font path', function() {
+      var content = '@font-face {\nfont-family:"icons";\nsrc:url("/styles/fonts/icons.eot");\nsrc:url("/styles/fonts/icons.eot#fragment") format("embedded-opentype"),\nurl("/styles/fonts/icons.woff") format("woff"),\nurl("/styles/fonts/icons.ttf") format("truetype"),\nurl("/styles/fonts/icons.svg#icons") format("svg");\nfont-weight:normal;\nfont-style:normal;\n}';
       var filemapping = {
         'build/styles/fonts/icons.eot': '/styles/fonts/icons.12345.eot',
         'build/styles/fonts/icons.woff': '/styles/fonts/icons.12345.woff',

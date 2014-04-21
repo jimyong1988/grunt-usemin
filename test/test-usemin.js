@@ -285,11 +285,11 @@ describe('usemin', function () {
     grunt.file.copy(path.join(__dirname, 'fixtures/usemin.html'), 'index.html');
     grunt.task.run('usemin');
     grunt.task.start();
+    grunt.filerev = null;
 
     var changed = grunt.file.read('index.html');
     // Check replace has performed its duty
     assert.ok(changed.match('<img src="images/test.2134.png">'));
-    grunt.filerev = null;
   });
 
 });
@@ -309,14 +309,14 @@ describe('useminPrepare', function () {
     assert.ok(concat.generated.files);
     assert.equal(concat.generated.files.length, 2);
 
-    assert.equal(concat.generated.files[1].dest, '.tmp/concat/scripts/plugins.js');
+    assert.equal(concat.generated.files[1].dest, path.normalize('.tmp/concat/scripts/plugins.js'));
     assert.equal(concat.generated.files[1].src.length, 13);
-    assert.equal(concat.generated.files[0].dest, '.tmp/concat/styles/main.min.css');
+    assert.equal(concat.generated.files[0].dest, path.normalize('.tmp/concat/styles/main.min.css'));
     assert.equal(concat.generated.files[0].src.length, 1);
 
     var uglify = grunt.config('uglify');
 
-    assert.equal(uglify.generated.files[0].dest, 'dist/scripts/plugins.js');
+    assert.equal(uglify.generated.files[0].dest, path.normalize('dist/scripts/plugins.js'));
     assert.deepEqual(uglify.generated.files[0].src, [path.normalize('.tmp/concat/scripts/plugins.js')]);
   });
 
@@ -380,12 +380,12 @@ describe('useminPrepare', function () {
 
       assert.equal(files.dest, path.normalize('.tmp/concat/scripts/foo.js'));
       assert.equal(files.src.length, 2);
-      assert.equal(files.src[0], 'foo/scripts/bar.js');
+      assert.equal(files.src[0], path.normalize('foo/scripts/bar.js'));
 
       var uglify = grunt.config('uglify');
       assert.equal(uglify.generated.files.length, 1);
       files = uglify.generated.files[0];
-      assert.equal(files.dest, 'dist/scripts/foo.js');
+      assert.equal(files.dest, path.normalize('dist/scripts/foo.js'));
     });
   });
 
@@ -398,7 +398,7 @@ describe('useminPrepare', function () {
     grunt.task.start();
 
     var uglify = grunt.config('uglify');
-    assert.equal(uglify.generated.files[0].dest, 'foo/scripts/plugins.js');
+    assert.equal(uglify.generated.files[0].dest, path.normalize('foo/scripts/plugins.js'));
     assert.deepEqual(uglify.generated.files[0].src, [path.normalize('.tmp/concat/scripts/plugins.js')]);
 
   });
@@ -412,7 +412,7 @@ describe('useminPrepare', function () {
 
     var concat = grunt.config('concat');
     var uglify = grunt.config('uglify');
-    assert.equal(concat.generated.files[0].dest, 'foo/concat/styles/main.min.css');
+    assert.equal(concat.generated.files[0].dest, path.normalize('foo/concat/styles/main.min.css'));
     assert.deepEqual(uglify.generated.files[0].src, [path.normalize('foo/concat/scripts/plugins.js')]);
 
   });
@@ -426,7 +426,7 @@ describe('useminPrepare', function () {
     grunt.task.start();
 
     var uglify = grunt.config('uglify');
-    assert.equal(uglify.generated.files[0].dest, 'dist/scripts/plugins.js');
+    assert.equal(uglify.generated.files[0].dest, path.normalize('dist/scripts/plugins.js'));
     assert.deepEqual(uglify.generated.files[0].src, [path.normalize('foo/concat/scripts/plugins.js')]);
 
   });
@@ -439,7 +439,7 @@ describe('useminPrepare', function () {
       options: {
         flow: {
           steps: {'js': ['uglifyjs']},
-          post: []
+          post: {}
         }
       }
     });
@@ -469,7 +469,7 @@ describe('useminPrepare', function () {
         flow: {
           'html': {
             steps: {'js': ['uglifyjs']},
-            post: []
+            post: {}
           }
         }
       }
@@ -485,7 +485,7 @@ describe('useminPrepare', function () {
     assert.ok(uglify);
     assert.equal(uglify.generated.files.length, 1);
     var files = uglify.generated.files[0];
-    assert.equal(files.dest, 'dist/scripts/plugins.js');
+    assert.equal(files.dest, path.normalize('dist/scripts/plugins.js'));
 
   });
 
@@ -511,7 +511,7 @@ describe('useminPrepare', function () {
       options: {
         flow: {
             steps: {'js': [copy]},
-            post: []
+            post: {}
           }
         }
       });
@@ -524,5 +524,44 @@ describe('useminPrepare', function () {
     assert.ok(copyCfg);
     assert.equal(copyCfg.generated.files[0].dest, path.normalize('dist/scripts/plugins.js'));
   });
-});
 
+  it('should allow to post configure generated steps', function() {
+
+    var concatPostConfig = {
+        name: 'concat',
+        createConfig: function(context) {
+            var generated = context.options.generated;
+            generated.options = {
+                foo: 'bar'
+              };
+          }
+      };
+
+    grunt.log.muted = true;
+    grunt.config.init();
+    grunt.config('useminPrepare', {
+        html: 'index.html',
+        options: {
+            flow: {
+                steps: {'js': ['concat']},
+                post: {
+                    'js': [
+                        concatPostConfig
+                      ]
+                    }
+                  }
+                }
+              });
+
+    grunt.file.copy(path.join(__dirname, 'fixtures/usemin.html'), 'index.html');
+    grunt.task.run('useminPrepare');
+    grunt.task.start();
+
+    var concatCfg = grunt.config('concat');
+    var options = concatCfg.generated.options;
+
+    assert.ok(options);
+    assert.equal(options.foo, 'bar');
+
+  });
+});
